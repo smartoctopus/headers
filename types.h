@@ -83,6 +83,8 @@ typedef i32 intptr;
 typedef u32 uintptr;
 #endif
 
+typedef intptr ptrdiff;
+
 typedef float f32;
 typedef double f64;
 
