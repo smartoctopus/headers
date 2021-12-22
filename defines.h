@@ -260,4 +260,16 @@
 #endif
 #endif
 
+#if !defined(internal)
+#define internal static
+#endif
+
+#if !defined(persistant)
+#define persistant static
+#endif
+
+#if !defined(global)
+#define global static
+#endif
+
 #endif /* DEFINES_H_*/
