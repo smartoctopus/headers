@@ -118,8 +118,8 @@ FLAG_INT_TYPE *flag_int(const char *name, const char *description,
 char **flag_string(const char *name, const char *description,
                    const char *default_value) {
   Flag *flag = flag_new(FLAG_STRING, name, description);
-  flag->default_value.string_value = cast(char *)default_value;
-  flag->value.string_value = cast(char *)default_value;
+  flag->default_value.string_value = cast(char *) default_value;
+  flag->value.string_value = cast(char *) default_value;
   return &flag->value.string_value;
 }
 
@@ -178,7 +178,7 @@ static bool flag_str_to_int(char *str, FLAG_INT_TYPE *result) {
 
 static char *_next_flag(int argc, char **argv, usize *iter) {
   *iter += 1;
-  if (*iter <= cast(usize)argc)
+  if (*iter <= cast(usize) argc)
     return argv[*iter];
   return NULL;
 }
@@ -187,7 +187,7 @@ noinline FlagError flag_parse(int argc, char **argv) {
   FlagParser *parser = &flag_parser;
   usize iter = 0;
 
-  for (iter = 1; iter < cast(usize)argc; ++iter) {
+  for (iter = 1; iter < cast(usize) argc; ++iter) {
     char *flag = argv[iter];
     if (*flag == '-') {
       usize i = 0;
@@ -277,7 +277,8 @@ void print_usage(FILE *stream) {
       fprintf(stream, "        Default: %s\n", flag.default_value.string_value);
     } break;
     case FLAG_INT: {
-      fprintf(stream, "        Default: "PRINT_I64"\n", flag.default_value.int_value);
+      fprintf(stream, "        Default: " PRINT_I64 "\n",
+              flag.default_value.int_value);
     } break;
     default: {
       fprintf(stderr, "Unreachable");
