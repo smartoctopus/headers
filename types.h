@@ -69,18 +69,30 @@ typedef u64 umax;
 typedef i64 intptr;
 typedef u64 uintptr;
 #elif defined(_WIN32)
-  #if !defined(_W64)
-    #if !defined(__midl) && (defined(_X86_) || defined(_M_IX86)) && _MSC_VER >= 1300
-      #define _W64 __w64
-    #else
-      #define _W64
-    #endif
-  #endif
+#if !defined(_W64)
+#if !defined(__midl) && (defined(_X86_) || defined(_M_IX86)) && _MSC_VER >= 1300
+#define _W64 __w64
+#else
+#define _W64
+#endif
+#endif
 typedef _W64 signed int intptr;
 typedef _W64 unsigned int uintptr;
 #else
 typedef i32 intptr;
 typedef u32 uintptr;
+#endif
+
+#if !defined(PRINT_I64)
+#if defined(COMPILER_MSVC)
+#define PRINT_I64 "%I64d"
+#else
+#if defined(__STDC_VERSION__)
+#define PRINT_I64 "%lld"
+#else
+#define PRINT_I64 "%ld"
+#endif
+#endif
 #endif
 
 typedef intptr ptrdiff;
@@ -116,19 +128,19 @@ typedef i32 Rune;
 #define I32_MIN (-0x7fffffff - 1)
 #define I32_MAX 0x7fffffff
 #if WORDSIZE == 64
-  #define U64_MIN 0ul
-  #define U64_MAX 0xfffffffffffffffful
-  #define I64_MIN (-0x7fffffffffffffffl - 1)
-  #define I64_MAX 0x7fffffffffffffffl
+#define U64_MIN 0ul
+#define U64_MAX 0xfffffffffffffffful
+#define I64_MIN (-0x7fffffffffffffffl - 1)
+#define I64_MAX 0x7fffffffffffffffl
 #else
-  #if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 199901L
-    #define U64_MIN 0ull
-    #define U64_MAX 0xffffffffffffffffull
-    #define I64_MIN (-0x7fffffffffffffffll - 1)
-    #define I64_MAX 0x7fffffffffffffffll
-  #else
-    #error Could not define 64-bit min and max macros. Consider compiling with a C99 compliant compiler
-  #endif
+#if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 199901L
+#define U64_MIN 0ull
+#define U64_MAX 0xffffffffffffffffull
+#define I64_MIN (-0x7fffffffffffffffll - 1)
+#define I64_MAX 0x7fffffffffffffffll
+#else
+#error Could not define 64-bit min and max macros. Consider compiling with a C99 compliant compiler
+#endif
 #endif
 #define F32_MIN 1.17549435e-38f
 #define F32_MAX 3.40282347e+38f
@@ -138,29 +150,30 @@ typedef i32 Rune;
 
 /* Bool */
 #if !defined(__cplusplus)
-  #if (defined(_MSC_VER) && _MSC_VER < 1800) || (!defined(_MSC_VER) && !defined(__STDC_VERSION__))
-    #if !defined(true)
-      #define true (0 == 0)
-    #endif
-    #if !defined(false)
-      #define false (0 != 0)
-    #endif
-    typedef u8 bool;
-  #else
-    #include <stdbool.h>
-  #endif
+#if (defined(_MSC_VER) && _MSC_VER < 1800) ||                                  \
+    (!defined(_MSC_VER) && !defined(__STDC_VERSION__))
+#if !defined(true)
+#define true (0 == 0)
+#endif
+#if !defined(false)
+#define false (0 != 0)
+#endif
+typedef u8 bool;
+#else
+#include <stdbool.h>
+#endif
 #endif
 
 /* Null */
 #undef NULL
 #if defined(__cplusplus)
-  #if __cplusplus >= 201103L
-    #define NULL nullptr
-  #else
-    #define NULL 0
-  #endif
+#if __cplusplus >= 201103L
+#define NULL nullptr
 #else
-  #define NULL ((void*)0)
+#define NULL 0
+#endif
+#else
+#define NULL ((void *)0)
 #endif
 
 #endif /* TYPES_H_ */
