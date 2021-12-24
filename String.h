@@ -59,7 +59,7 @@ u8 *String_to_cstr(String *str);
 usize String_length(String *str);
 usize String_capacity(String *str);
 
-#if !define(String_from_cstr)
+#if !defined(String_from_cstr)
 #define String_from_cstr(cstr) String_alloc(cast(u8 *)(cstr))
 #endif
 
