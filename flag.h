@@ -35,7 +35,6 @@ typedef enum FlagErrorKind {
   FLAG_ERROR_NO_VALUE,
   FLAG_ERROR_INVALID_VALUE,
   FLAG_ERROR_COUNT,
-  FLAG_ERROR_INVALID,
   FLAG_ERROR_INVALID_FLAG
 } FlagErrorKind;
 
@@ -50,6 +49,10 @@ typedef struct FlagError {
     _parser->error.kind = _kind;                                               \
     _parser->error.flag = _flag;                                               \
   } while (0)
+#endif
+
+#if !defined(flag_has_error)
+#define flag_has_error(error) (error.kind != FLAG_ERROR_NONE)
 #endif
 
 #if !defined(FLAG_NUM)
@@ -75,6 +78,10 @@ FlagError flag_parse(int argc, char **argv);
 
 const char *flag_error_to_string(FlagError error);
 void flag_print_error(FlagError error);
+
+bool flag_has_rest_args();
+int flag_get_rest_argc();
+char **flag_get_rest_argv();
 
 #endif
 
@@ -209,6 +216,8 @@ noinline FlagError flag_parse(int argc, char **argv) {
               parser->flags[i].value.int_value = int_value;
             } else {
               SET_FLAG_PARSER_ERROR(parser, FLAG_ERROR_INVALID_VALUE, flag);
+              parser->rest_argc = argc - iter;
+              parser->rest_argv = argv + iter;
               return parser->error;
             }
             found = true;
@@ -218,6 +227,8 @@ noinline FlagError flag_parse(int argc, char **argv) {
             if (string_value != NULL) {
               parser->flags[i].value.string_value = string_value;
             } else {
+              parser->rest_argc = argc - iter;
+              parser->rest_argv = argv + iter;
               /* The error was set by the next_flag function */
               return parser->error;
             }
@@ -230,21 +241,27 @@ noinline FlagError flag_parse(int argc, char **argv) {
       }
       if (!found) {
         SET_FLAG_PARSER_ERROR(parser, FLAG_ERROR_INVALID_FLAG, flag);
+        parser->rest_argc = argc - iter;
+        parser->rest_argv = argv + iter;
         return parser->error;
       }
     } else {
       SET_FLAG_PARSER_ERROR(parser, FLAG_ERROR_INVALID_FLAG, flag);
+      parser->rest_argc = argc - iter;
+      parser->rest_argv = argv + iter;
       return parser->error;
     }
   }
 
+  parser->rest_argc = argc - iter;
+  parser->rest_argv = argv + iter;
   return parser->error;
 }
 
 const char *flag_error_to_string(FlagError error) {
-  static const char *error_string[] = {"No Error",       "No value passed",
-                                       "Invalid value",  "Count error",
-                                       "Unknown errror", "Invalid flag"};
+  static const char *error_string[] = {"No Error", "No value passed",
+                                       "Invalid value", "Count error",
+                                       "Invalid flag"};
 
   if (error.kind >= FLAG_ERROR_NONE && error.kind <= FLAG_ERROR_INVALID_FLAG) {
     return error_string[error.kind];
@@ -285,6 +302,21 @@ void print_usage(FILE *stream) {
     } break;
     }
   }
+}
+
+bool flag_has_rest_args() {
+  FlagParser *parser = &flag_parser;
+  return parser->rest_argc > 0 && parser->error.kind == FLAG_ERROR_INVALID_FLAG;
+}
+
+int flag_get_rest_argc() {
+  FlagParser *parser = &flag_parser;
+  return parser->rest_argc;
+}
+
+char **flag_get_rest_argv() {
+  FlagParser *parser = &flag_parser;
+  return parser->rest_argv;
 }
 
 #endif
