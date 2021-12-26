@@ -6,6 +6,16 @@
 #include "macros.h"
 #include "types.h"
 
+#if !defined(ARRAY_MALLOC)
+#define ALLOCATORS_IMPLEMENTATION
+#if !defined(IMPORT_XMALLOC_HANDLER)
+#define IMPORT_XMALLOC_HANDLER
+#endif
+#include "allocators.h"
+#define ARRAY_MALLOC xmalloc
+#define ARRAY_FREE xfree
+#endif
+
 /* Variable length arrays */
 typedef struct ArrayHeader {
   usize length;
@@ -39,7 +49,7 @@ void *__array_set_capacity(void *array, usize capacity, usize element_size);
   do {                                                                         \
     void **_array = cast(void **) & (x);                                       \
     ArrayHeader *_header = cast(ArrayHeader *)                                 \
-        xmalloc(sizeof(ArrayHeader) + sizeof(*(x)) * (_cap));                  \
+        ARRAY_MALLOC(sizeof(ArrayHeader) + sizeof(*(x)) * (_cap));                  \
     _header->length = 0;                                                       \
     _header->capacity = _cap;                                                  \
     *_array = cast(void *)(_header + 1);                                       \
@@ -54,7 +64,7 @@ void *__array_set_capacity(void *array, usize capacity, usize element_size);
 #define array_dealloc(x)                                                       \
   do {                                                                         \
     ArrayHeader *_header = ARRAY_HEADER(x);                                    \
-    xfree(_header);                                                            \
+    ARRAY_FREE(_header);                                                            \
   } while (0)
 #endif
 
@@ -114,7 +124,7 @@ void *__array_set_capacity(void *array, usize capacity, usize element_size);
              sizeof(*(items)) * array_length(items));                          \
       array_length(x) += array_length(items);                                  \
     } else                                                                     \
-      printf("Concatenating arrays of different types");                       \
+      fprintf(stderr, "Concatenating arrays of different types");                       \
   } while (0)
 #endif
 
@@ -159,12 +169,12 @@ top:
     header->capacity = capacity;
   }
   size = sizeof(ArrayHeader) + element_size * capacity;
-  new_header = cast(ArrayHeader *) xmalloc(size);
+  new_header = cast(ArrayHeader *) ARRAY_MALLOC(size);
   memmove(new_header, header,
           sizeof(ArrayHeader) + element_size * header->length);
   new_header->length = header->length;
   new_header->capacity = capacity;
-  xfree(header);
+  ARRAY_FREE(header);
   return (new_header + 1);
 }
 
