@@ -14,6 +14,12 @@
 #define FLAG_INT_TYPE i64
 #endif
 
+typedef struct SubMode {
+  const char *name;
+  const char *description;
+  bool parsed;
+} SubMode;
+
 typedef enum FlagType { FLAG_BOOL, FLAG_INT, FLAG_STRING } FlagType;
 
 typedef union FlagValue {
@@ -35,7 +41,9 @@ typedef enum FlagErrorKind {
   FLAG_ERROR_NO_VALUE,
   FLAG_ERROR_INVALID_VALUE,
   FLAG_ERROR_COUNT,
-  FLAG_ERROR_INVALID_FLAG
+  FLAG_ERROR_INVALID_FLAG,
+  FLAG_ERROR_SUBMODE_COUNT,
+  FLAG_ERROR_INVALID_SUBMODE
 } FlagErrorKind;
 
 typedef struct FlagError {
@@ -55,19 +63,35 @@ typedef struct FlagError {
 #define flag_has_error(error) (error.kind != FLAG_ERROR_NONE)
 #endif
 
+#if !defined(SUBMODE_NUM)
+#define SUBMODE_NUM 12
+#endif
+
 #if !defined(FLAG_NUM)
 #define FLAG_NUM 128
 #endif
 
 typedef struct FlagParser {
+  SubMode submodes[SUBMODE_NUM];
   Flag flags[FLAG_NUM];
+
   usize flags_count;
+  usize submodes_count;
+
+  bool has_skipped_program_name;
 
   i32 rest_argc;
   char **rest_argv;
 
   FlagError error;
 } FlagParser;
+
+bool *flag_submode(const char *name, const char *description);
+FlagError _flag_parse_submode(int *argc, char ***argv);
+
+#if !defined(flag_parse_submode)
+#define flag_parse_submode(_argc, _argv) _flag_parse_submode(&_argc, &_argv)
+#endif
 
 bool *flag_bool(const char *name, const char *description, bool default_value);
 FLAG_INT_TYPE *flag_int(const char *name, const char *description,
@@ -89,6 +113,54 @@ char **flag_get_rest_argv();
 #undef FLAG_IMPLEMENTATION
 
 static FlagParser flag_parser;
+
+bool *flag_submode(const char *name, const char *description) {
+  FlagParser *parser = &flag_parser;
+
+  if (parser->submodes_count < SUBMODE_NUM) {
+    SubMode *submode = &parser->submodes[parser->submodes_count++];
+    submode->name = name;
+    submode->description = description;
+    submode->parsed = false;
+    return &submode->parsed;
+  } else {
+    SET_FLAG_PARSER_ERROR(parser, FLAG_ERROR_SUBMODE_COUNT, cast(char *) name);
+    return NULL;
+  }
+}
+
+FlagError _flag_parse_submode(int *argc, char ***argv) {
+  FlagParser *parser = &flag_parser;
+  usize iter = 0;
+  char *flag;
+  bool found;
+
+
+  if (!parser->has_skipped_program_name) {
+    parser->has_skipped_program_name = true;
+    *argc -= 1;
+    *argv += 1;
+  }
+
+  flag = *argv[0];
+
+  SET_FLAG_PARSER_ERROR(parser, FLAG_ERROR_NONE, flag);
+
+  for (iter = 0; iter < parser->submodes_count; ++iter) {
+    if (strcmp(flag, parser->submodes[iter].name) == 0) {
+      parser->submodes[iter].parsed = true;
+      found = true;
+    }
+  }
+  if (!found) {
+    SET_FLAG_PARSER_ERROR(parser, FLAG_ERROR_INVALID_SUBMODE, flag);
+    return parser->error;
+  }
+  *argc -= 1;
+  *argv += 1;
+
+  return parser->error;
+}
 
 static Flag *flag_new(FlagType type, const char *name,
                       const char *description) {
@@ -191,9 +263,9 @@ static char *_next_flag(int argc, char **argv, usize *iter) {
 
 noinline FlagError flag_parse(int argc, char **argv) {
   FlagParser *parser = &flag_parser;
-  usize iter = 0;
+  usize iter = cast(usize)(!parser->has_skipped_program_name);
 
-  for (iter = 1; iter < cast(usize) argc; ++iter) {
+  for (; iter < cast(usize) argc; ++iter) {
     char *flag = argv[iter];
     if (*flag == '-') {
       usize i = 0;
@@ -259,9 +331,9 @@ noinline FlagError flag_parse(int argc, char **argv) {
 }
 
 const char *flag_error_to_string(FlagError error) {
-  static const char *error_string[] = {"No Error", "No value passed",
-                                       "Invalid value", "Count error",
-                                       "Invalid flag"};
+  static const char *error_string[] = {
+      "No Error",     "No value passed",     "Invalid value",  "Count error",
+      "Invalid flag", "Submode count error", "Invalid submode"};
 
   if (error.kind >= FLAG_ERROR_NONE && error.kind <= FLAG_ERROR_INVALID_FLAG) {
     return error_string[error.kind];
