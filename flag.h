@@ -101,8 +101,7 @@ static Flag *flag_new(FlagType type, const char *name,
     flag->description = cast(char *) description;
     return flag;
   } else {
-    SET_FLAG_PARSER_ERROR(parser, FLAG_ERROR_COUNT,
-                          cast(char *) "Defined more flags than FLAG_NUM");
+    SET_FLAG_PARSER_ERROR(parser, FLAG_ERROR_COUNT, cast(char *) name);
     return NULL;
   }
 }
@@ -133,7 +132,8 @@ char **flag_string(const char *name, const char *description,
 static bool flag_str_to_int(char *str, FLAG_INT_TYPE *result) {
   FlagParser *parser = &flag_parser;
   char *start = str;
-  FLAG_INT_TYPE is_negative = 1;
+  bool is_negative = false;
+  FLAG_INT_TYPE sign = 1;
   persistant const FLAG_INT_TYPE char_to_digit[256] = {
       0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
       0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -147,10 +147,9 @@ static bool flag_str_to_int(char *str, FLAG_INT_TYPE *result) {
       0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
       0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
   if (str != NULL) {
-    if (*str == '-') {
-      is_negative = -1;
-      str++;
-    }
+    is_negative = *str == '-';
+    sign = is_negative * -1;
+    str += is_negative;
     if (isdigit(*str)) {
       while (isdigit(*str)) {
         *result *= 10;
@@ -232,6 +231,7 @@ noinline FlagError flag_parse(int argc, char **argv) {
               /* The error was set by the next_flag function */
               return parser->error;
             }
+            found = true;
           } break;
           default: {
             fprintf(stderr, "Unreachable");
