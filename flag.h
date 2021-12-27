@@ -258,8 +258,9 @@ static bool flag_str_to_int(char *str, FLAG_INT_TYPE *result) {
 
 static char *_next_flag(int argc, char **argv, usize *iter) {
   *iter += 1;
-  if (*iter <= cast(usize) argc)
+  if (*iter < cast(usize) argc)
     return argv[*iter];
+
   return NULL;
 }
 
@@ -307,7 +308,8 @@ noinline FlagError flag_parse(int argc, char **argv) {
             } else {
               parser->rest_argc = argc - iter;
               parser->rest_argv = argv + iter;
-              /* The error was set by the next_flag function */
+
+              SET_FLAG_PARSER_ERROR(parser, FLAG_ERROR_INVALID_VALUE, flag);
               return parser->error;
             }
             found = true;
@@ -337,6 +339,19 @@ noinline FlagError flag_parse(int argc, char **argv) {
   return parser->error;
 }
 
+static Flag *get_flag_by_name(const char *name) {
+  FlagParser *parser = &flag_parser;
+  usize iter = 0;
+
+  for (; iter < parser->flags_count; ++iter) {
+    if (strcmp(name, parser->flags[iter].name) == 0) {
+      return &parser->flags[iter];
+    }
+  }
+
+  return NULL;
+}
+
 const char *flag_error_to_string(FlagError error) {
   static const char *error_string[] = {
       "No Error",     "No value passed",     "Invalid value",  "Count error",
@@ -351,8 +366,24 @@ const char *flag_error_to_string(FlagError error) {
 
 void flag_print_error(FlagError error) {
   if (error.kind != FLAG_ERROR_NONE) {
-    fprintf(stderr, "Error %s on flag %s\n", flag_error_to_string(error),
-            error.flag);
+    Flag *flag = get_flag_by_name(error.flag);
+    fprintf(stderr, "[Error] %s on flag '%s': ", flag_error_to_string(error),
+            flag->name);
+    switch (flag->type) {
+    case FLAG_BOOL: {
+      fprintf(stderr, "%s\n",
+              flag->default_value.bool_value ? "true" : "false");
+    } break;
+    case FLAG_INT: {
+      fprintf(stderr, PRINT_I64 "\n", flag->value.int_value);
+    } break;
+    case FLAG_STRING: {
+      fprintf(stderr, "%s\n", flag->value.string_value);
+    } break;
+    default: {
+      fprintf(stderr, "Unreahcable!");
+    } break;
+    }
   }
 }
 
