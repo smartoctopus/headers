@@ -105,10 +105,10 @@ FlagError flag_parse(int argc, char **argv);
 const char *flag_error_to_string(FlagError error);
 void flag_print_error(FlagError error);
 
-const char *flag_get_program_name();
-bool flag_has_rest_args();
-int flag_get_rest_argc();
-char **flag_get_rest_argv();
+const char *flag_get_program_name(void);
+bool flag_has_rest_args(void);
+int flag_get_rest_argc(void);
+char **flag_get_rest_argv(void);
 
 #endif
 
@@ -240,7 +240,7 @@ static bool flag_str_to_int(char *str, FLAG_INT_TYPE *result) {
         SET_FLAG_PARSER_ERROR(parser, FLAG_ERROR_INVALID_VALUE, start);
         return false;
       }
-      *result *= is_negative;
+      *result *= sign;
       return true;
     } else {
       SET_FLAG_PARSER_ERROR(parser, FLAG_ERROR_INVALID_VALUE,
@@ -414,23 +414,23 @@ void print_usage(FILE *stream) {
   }
 }
 
-const char *flag_get_program_name() {
+const char *flag_get_program_name(void) {
   FlagParser *parser = &flag_parser;
 
   return cast(const char *) parser->program_name;
 }
 
-bool flag_has_rest_args() {
+bool flag_has_rest_args(void) {
   FlagParser *parser = &flag_parser;
   return parser->rest_argc > 0 && parser->error.kind == FLAG_ERROR_INVALID_FLAG;
 }
 
-int flag_get_rest_argc() {
+int flag_get_rest_argc(void) {
   FlagParser *parser = &flag_parser;
   return parser->rest_argc;
 }
 
-char **flag_get_rest_argv() {
+char **flag_get_rest_argv(void) {
   FlagParser *parser = &flag_parser;
   return parser->rest_argv;
 }
