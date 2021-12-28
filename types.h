@@ -65,6 +65,115 @@ typedef u64 fast_u64;
 typedef i64 imax;
 typedef u64 umax;
 
+/* Print specifiers */
+#if defined(COMPILER_MSVC) && _MSC_VER >= 1300
+#define PRId8       "%d"
+#define PRIi8       "%i"
+#define PRIdLEAST8  "%d"
+#define PRIiLEAST8  "%i"
+#define PRIdFAST8   "%d"
+#define PRIiFAST8   "%i"
+
+#define PRId16       "%hd"
+#define PRIi16       "%hi"
+#define PRIdLEAST16  "%hd"
+#define PRIiLEAST16  "%hi"
+#if WORDSIZE == 64
+#define PRIdFAST16   "%I64d"
+#define PRIiFAST16   "%I64i"
+#else
+#define PRIdFAST16   "%I32d"
+#define PRIiFAST16   "%I32i"
+#endif
+
+#define PRId32       "%I32d"
+#define PRIi32       "%I32i"
+#define PRIdLEAST32  "%I32d"
+#define PRIiLEAST32  "%I32i"
+#if WORDSIZE ==64
+#define PRIdFAST32   "%I64d"
+#define PRIiFAST32   "%I64i"
+#else
+#define PRIdFAST32   "%I32d"
+#define PRIiFAST32   "%I32i"
+#endif
+
+#define PRId64       "%I64d"
+#define PRIi64       "%I64i"
+#define PRIdLEAST64  "%I64d"
+#define PRIiLEAST64  "%I64i"
+#define PRIdFAST64   "%I64d"
+#define PRIiFAST64   "%I64i"
+
+#define PRIdMAX     "%I64d"
+#define PRIiMAX     "%I64i"
+
+#define PRIdPTR     "%p"
+#define PRIiPTR     "%p"
+
+#else /* Here we probably have a C99 compliant compilers? */
+
+#define PRId8       "%d"
+#define PRIi8       "%i"
+#define PRIdLEAST8  "%d"
+#define PRIiLEAST8  "%i"
+#define PRIdFAST8   "%d"
+#define PRIiFAST8   "%i"
+
+#define PRId16       "%hd"
+#define PRIi16       "%hi"
+#define PRIdLEAST16  "%hd"
+#define PRIiLEAST16  "%hi"
+#if WORDSIZE == 64
+#define PRIdFAST16   "%ld"
+#define PRIiFAST16   "%li"
+#else
+#define PRIdFAST16   "%hd"
+#define PRIiFAST16   "%hi"
+#endif
+
+#define PRId32       "%d"
+#define PRIi32       "%i"
+#define PRIdLEAST32  "%d"
+#define PRIiLEAST32  "%i"
+#if WORDSIZE ==64
+#define PRIdFAST32   "%ld"
+#define PRIiFAST32   "%li"
+#else
+#define PRIdFAST32   "%d"
+#define PRIiFAST32   "%i"
+#endif
+
+#if WORDSIZE == 64
+#define PRId64       "%ld"
+#define PRIi64       "%li"
+#define PRIdLEAST64  "%ld"
+#define PRIiLEAST64  "%li"
+#define PRIdFAST64   "%ld"
+#define PRIiFAST64   "%li"
+
+#define PRIdMAX      "%ld"
+#define PRIiMAX      "%li"
+#else
+#if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 199901L
+#define PRId64       "%lld"
+#define PRIi64       "%lli"
+#define PRIdLEAST64  "%lld"
+#define PRIiLEAST64  "%lli"
+#define PRIdFAST64   "%lld"
+#define PRIiFAST64   "%lli"
+
+#define PRIdMAX     "%lld"
+#define PRIiMAX     "%lli"
+#else
+#error Cannot define print specifiers for int64. Consider compiling with a C99 compliant compiler
+#endif
+#endif
+
+#define PRIdPTR     "%p"
+#define PRIiPTR     "%p"
+#endif
+
 #if defined(_WIN64) || (WORDSIZE == 64)
 typedef i64 intptr;
 typedef u64 uintptr;
@@ -81,18 +190,6 @@ typedef _W64 unsigned int uintptr;
 #else
 typedef i32 intptr;
 typedef u32 uintptr;
-#endif
-
-#if !defined(PRINT_I64)
-#if defined(COMPILER_MSVC)
-#define PRINT_I64 "%I64d"
-#else
-#if defined(__STDC_VERSION__)
-#define PRINT_I64 "%lld"
-#else
-#define PRINT_I64 "%ld"
-#endif
-#endif
 #endif
 
 typedef intptr ptrdiff;

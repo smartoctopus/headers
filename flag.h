@@ -375,7 +375,7 @@ void flag_print_error(FlagError error) {
               flag->default_value.bool_value ? "true" : "false");
     } break;
     case FLAG_INT: {
-      fprintf(stderr, PRINT_I64 "\n", flag->value.int_value);
+      fprintf(stderr, PRId64 "\n", flag->value.int_value);
     } break;
     case FLAG_STRING: {
       fprintf(stderr, "%s\n", flag->value.string_value);
@@ -404,7 +404,7 @@ void print_usage(FILE *stream) {
       fprintf(stream, "        Default: %s\n", flag.default_value.string_value);
     } break;
     case FLAG_INT: {
-      fprintf(stream, "        Default: " PRINT_I64 "\n",
+      fprintf(stream, "        Default: " PRId64 "\n",
               flag.default_value.int_value);
     } break;
     default: {
