@@ -27,13 +27,9 @@ void free_file(file_t *file);
 
 #if defined(FILE_IMPLEMENTATION)
 #include "macros.h"
+#include "allocators.h"
 
 #if !defined(FILE_MALLOC)
-#define ALLOCATORS_IMPLEMENTATION
-#if !defined(IMPORT_XMALLOC_HANDLER)
-#define IMPORT_XMALLOC_HANDLER
-#endif
-#include "allocators.h"
 #define FILE_MALLOC xmalloc
 #define FILE_FREE xfree
 #endif

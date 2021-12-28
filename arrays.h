@@ -7,11 +7,6 @@
 #include "types.h"
 
 #if !defined(ARRAY_MALLOC)
-#define ALLOCATORS_IMPLEMENTATION
-#if !defined(IMPORT_XMALLOC_HANDLER)
-#define IMPORT_XMALLOC_HANDLER
-#endif
-#include "allocators.h"
 #define ARRAY_MALLOC xmalloc
 #define ARRAY_FREE xfree
 #endif
