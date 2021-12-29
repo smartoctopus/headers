@@ -60,7 +60,7 @@ usize String_length(String *str);
 usize String_capacity(String *str);
 
 #if !defined(String_from_cstr)
-#define String_from_cstr(cstr) String_alloc(cast(u8 *)(cstr))
+#define String_from_cstr(_allocator, cstr) String_alloc(_allocator, cast(u8 *)(cstr))
 #endif
 
 #endif /* STRING_H_ */
