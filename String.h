@@ -52,9 +52,9 @@ static NonSSO_Data String_get_non_sso_data(String *str);
 static usize u8_strlen(u8 *str);
 
 /* Public API */
-String String_alloc_length(u8 *string, usize size);
-String String_alloc(u8 *string);
-void String_dealloc(String *str);
+String String_alloc_length(allocator_t a, u8 *string, usize size);
+String String_alloc(allocator_t a, u8 *string);
+void String_dealloc(allocator_t a, String *str);
 u8 *String_to_cstr(String *str);
 usize String_length(String *str);
 usize String_capacity(String *str);
@@ -154,14 +154,14 @@ static usize u8_strlen(u8 *str) {
 }
 
 /* Public API */
-String String_alloc_length(u8 *string, usize size) {
+String String_alloc_length(allocator_t a, u8 *string, usize size) {
   String result;
   if (size <= SSO_CAPACITY) {
     memcpy(result.sso.str, string, size);
     result.sso.str[size] = '\0';
     String_set_sso_size(&result, size);
   } else {
-    result.non_sso.str = xmalloc(size + 1);
+    result.non_sso.str = xmalloc(a, size + 1);
     memcpy(result.non_sso.str, string, size);
     result.non_sso.str[size + 1] = '\0';
     String_set_non_sso_data(&result, size, size);
@@ -169,13 +169,13 @@ String String_alloc_length(u8 *string, usize size) {
   return result;
 }
 
-alwaysinline String String_alloc(u8 *string) {
-  return String_alloc_length(string, u8_strlen(string));
+alwaysinline String String_alloc(allocator_t a, u8 *string) {
+  return String_alloc_length(a, string, u8_strlen(string));
 }
 
-alwaysinline void String_dealloc(String *str) {
+alwaysinline void String_dealloc(allocator_t a, String *str) {
   if (!String_is_sso(str)) {
-    xfree(str->non_sso.str);
+    xfree(a, str->non_sso.str);
   }
 }
 

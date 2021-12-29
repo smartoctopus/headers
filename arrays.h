@@ -6,15 +6,11 @@
 #include "macros.h"
 #include "types.h"
 
-#if !defined(ARRAY_MALLOC)
-#define ARRAY_MALLOC xmalloc
-#define ARRAY_FREE xfree
-#endif
-
 /* Variable length arrays */
 typedef struct ArrayHeader {
   usize length;
   usize capacity;
+  allocator_t allocator;
 } ArrayHeader;
 
 void *__array_set_capacity(void *array, usize capacity, usize element_size);
@@ -40,26 +36,27 @@ void *__array_set_capacity(void *array, usize capacity, usize element_size);
 #endif
 
 #if !defined(array_init_helper)
-#define array_init_helper(x, _cap)                                             \
+#define array_init_helper(_allocator, x, _cap)                                 \
   do {                                                                         \
     void **_array = cast(void **) & (x);                                       \
     ArrayHeader *_header = cast(ArrayHeader *)                                 \
-        ARRAY_MALLOC(sizeof(ArrayHeader) + sizeof(*(x)) * (_cap));                  \
+        xmalloc(_allocator, sizeof(ArrayHeader) + sizeof(*(x)) * (_cap));      \
     _header->length = 0;                                                       \
     _header->capacity = _cap;                                                  \
+    _header->allocator = _allocator;                                           \
     *_array = cast(void *)(_header + 1);                                       \
   } while (0)
 #endif
 
 #if !defined(array_init)
-#define array_init(x) array_init_helper(x, 8)
+#define array_init(allocator, x) array_init_helper(allocator, x, 8)
 #endif
 
 #if !defined(array_dealloc)
 #define array_dealloc(x)                                                       \
   do {                                                                         \
     ArrayHeader *_header = ARRAY_HEADER(x);                                    \
-    ARRAY_FREE(_header);                                                            \
+    dealloc(_header->allocator, _header);                                      \
   } while (0)
 #endif
 
@@ -112,14 +109,17 @@ void *__array_set_capacity(void *array, usize capacity, usize element_size);
 #if !defined(array_concat)
 #define array_concat(x, items)                                                 \
   do {                                                                         \
-    if (size_of(*(x)) == size_of(*(items))) {                                  \
+    if (sizeof(*(x)) == sizeof(*(items)) &&                                    \
+        are_same_allocators(ARRAY_HEADER(x)->allocator,                        \
+                            ARRAY_HEADER(x)->allocator)) {                     \
+      usize x_length = array_length(x);                                        \
       if (array_capacity(x) < (array_length(x) + array_length(items)))         \
         array_grow(x, (array_length(x) + array_length(items)));                \
-      memcpy(&(x)[array_length(x)], (items),                                   \
-             sizeof(*(items)) * array_length(items));                          \
+      memcpy(x + x_length, (items), sizeof(*(items)) * array_length(items));   \
       array_length(x) += array_length(items);                                  \
     } else                                                                     \
-      fprintf(stderr, "Concatenating arrays of different types");                       \
+      fprintf(stderr,                                                          \
+              "[arrays error] Concatenating arrays of different types");       \
   } while (0)
 #endif
 
@@ -129,7 +129,7 @@ void *__array_set_capacity(void *array, usize capacity, usize element_size);
     if (array_length(x) > 0)                                                   \
       ARRAY_HEADER(x)->length -= 1;                                            \
     else                                                                       \
-      s_panic("Popping from a zero sized array");                              \
+      fprintf(stderr, "[arrays error] Popping from a zero sized array");       \
   } while (0)
 #endif
 
@@ -147,10 +147,11 @@ void *__array_set_capacity(void *array, usize capacity, usize element_size);
 /* Variable Length Arrays */
 void *__array_set_capacity(void *array, usize capacity, usize element_size) {
   ArrayHeader *header = ARRAY_HEADER(array);
-  usize new_capacity;
+  allocator_t a = header->allocator;
+  usize new_capacity = capacity;
   usize size;
   ArrayHeader *new_header;
-top:
+
   if (capacity == header->capacity)
     return array;
 
@@ -159,18 +160,18 @@ top:
       new_capacity = GROW_FORMULA(header->capacity);
       if (new_capacity < capacity)
         new_capacity = capacity;
-      goto top; /* I know GOTO is Evil but i don't want to use recursion */
     }
-    header->capacity = capacity;
+    header->capacity = new_capacity;
   }
   size = sizeof(ArrayHeader) + element_size * capacity;
-  new_header = cast(ArrayHeader *) ARRAY_MALLOC(size);
+  new_header = cast(ArrayHeader *) xmalloc(a, size);
   memmove(new_header, header,
           sizeof(ArrayHeader) + element_size * header->length);
   new_header->length = header->length;
   new_header->capacity = capacity;
-  ARRAY_FREE(header);
-  return (new_header + 1);
+  new_header->allocator = a;
+  xfree(a, header);
+  return cast(void *)(new_header + 1);
 }
 
 #endif
