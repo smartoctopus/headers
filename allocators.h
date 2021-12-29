@@ -37,6 +37,8 @@ typedef struct allocator_t {
   (x._alloc == y._alloc && x._realloc == y._realloc && x._dealloc == y._dealloc)
 #endif
 
+extern allocator_t std_allocator;
+
 /* xmalloc */
 extern void xmalloc_handler(void);
 
