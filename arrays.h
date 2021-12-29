@@ -143,7 +143,7 @@ void *__array_set_capacity(void *array, usize capacity, usize element_size);
 #endif /* ARRAYS_H_ */
 
 #if defined(ARRAYS_IMPLEMENTATION)
-
+#undef ARRAYS_IMPLEMENTATION
 /* Variable Length Arrays */
 void *__array_set_capacity(void *array, usize capacity, usize element_size) {
   ArrayHeader *header = ARRAY_HEADER(array);
