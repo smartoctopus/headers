@@ -3,6 +3,8 @@
 
 #include "defines.h"
 #include "types.h"
+#include <stdio.h>
+#include <stdlib.h>
 
 /* Debugging */
 /* I know there are builtin functions in various compilers but this is more
