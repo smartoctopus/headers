@@ -56,7 +56,7 @@ void *__array_set_capacity(void *array, usize capacity, usize element_size);
 #define array_dealloc(x)                                                       \
   do {                                                                         \
     ArrayHeader *_header = ARRAY_HEADER(x);                                    \
-    dealloc(_header->allocator, _header);                                      \
+    s_dealloc(_header->allocator, _header);                                    \
   } while (0)
 #endif
 
@@ -64,7 +64,7 @@ void *__array_set_capacity(void *array, usize capacity, usize element_size);
 #define array_set_capacity(x, capacity)                                        \
   do {                                                                         \
     if (x) {                                                                   \
-      void **_array = cast(void *) & (x);                                      \
+      void **_array = cast(void **) & (x);                                     \
       *_array = __array_set_capacity((x), (capacity), sizeof(*(x)));           \
     }                                                                          \
   } while (0)
@@ -138,6 +138,10 @@ void *__array_set_capacity(void *array, usize capacity, usize element_size);
   do {                                                                         \
     ARRAY_HEADER(x)->length = 0;                                               \
   } while (0)
+#endif
+
+#if !defined(array_end)
+#define array_end(x) (x + array_length(x))
 #endif
 
 #endif /* ARRAYS_H_ */
