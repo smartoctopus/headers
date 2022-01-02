@@ -74,7 +74,7 @@ void *__array_set_capacity(void *array, usize capacity, usize element_size);
 #define array_grow(x, cap)                                                     \
   do {                                                                         \
     isize _cap = GROW_FORMULA(array_capacity(x));                              \
-    if (_cap < cap)                                                            \
+    if (_cap < cast(isize)cap)                                                            \
       _cap = cap;                                                              \
     array_set_capacity(x, _cap);                                               \
   } while (0)

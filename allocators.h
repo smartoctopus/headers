@@ -173,9 +173,11 @@ void arena_error_dealloc(allocator_t *a, void *ptr) { return; }
 
 static void arena_grow(arena_t *arena, usize min_size) {
   usize size = ALIGN_UP(max(min_size, ARENA_SIZE), ARENA_ALIGNMENT);
+  arena_block_t block;
   arena->ptr = cast(u8 *)system_alloc(size); 
   arena->end = arena->ptr + size;
-  arena_block_t block = { arena->ptr, size };
+  block.ptr = arena->ptr;
+  block.size = size;
   array_push(arena->blocks, block);
 }
 
@@ -194,10 +196,11 @@ allocator_t make_arena_allocator(allocator_t a, usize size) {
 
 void *arena_alloc(allocator_t *a, usize size) {
   arena_t *arena = cast(arena_t *)a->data;
+  void *ptr;
   if (size > (usize)(arena->end - arena->ptr)) {
     arena_grow(arena, size);
   }
-  void *ptr = arena->ptr;
+  ptr = arena->ptr;
   arena->ptr = cast(u8 *)ALIGN_UP_PTR(arena->ptr + size, ARENA_ALIGNMENT);
   return ptr;
 }
@@ -210,7 +213,8 @@ void *arena_realloc(allocator_t *a, void *ptr, usize size) {
 
 void arena_dealloc(allocator_t *a) {
   arena_t *arena = cast(arena_t *)a->data;
-  for (arena_block_t *it = arena->blocks; it != array_end(arena->blocks); ++it) {
+  arena_block_t *it;
+  for (it = arena->blocks; it != array_end(arena->blocks); ++it) {
     system_dealloc(it->ptr, it->size);
   }
   array_dealloc(arena->blocks);
