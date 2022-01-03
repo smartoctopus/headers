@@ -23,11 +23,22 @@ typedef struct allocator_t {
   void *data;
 } allocator_t;
 
-alwaysinline void *s_alloc(allocator_t a, usize size);
-alwaysinline void *s_realloc(allocator_t a, void *ptr, usize size);
-alwaysinline void s_dealloc(allocator_t a, void *ptr);
+#if !defined(s_alloc)
+#define s_alloc(_a, _size) (_a.func(ALLOC_MALLOC, _a.data, NULL, _size))
+#endif
 
-alwaysinline bool allocators_eq(allocator_t a, allocator_t b);
+#if !defined(s_realloc)
+#define s_realloc(_a, _ptr, _size)                                             \
+  (_a.func(ALLOC_REALLOC, _a.data, _ptr, _size))
+#endif
+
+#if !defined(s_dealloc)
+#define s_dealloc(_a, _ptr) (_a.func(ALLOC_FREE, _a.data, _ptr, 0))
+#endif
+
+#if !defined(allocators_eq)
+#define allocators_eq(_a, _b) (_a.func == _b.func && _a.data == _b.data)
+#endif
 
 /* System Allocators */
 alwaysinline void *system_alloc(usize size);
@@ -57,23 +68,6 @@ allocator_t make_arena_allocator(allocator_t a, usize arena_size);
 
 #include "arrays.h"
 #include "macros.h"
-
-/* Public API */
-alwaysinline void *s_alloc(allocator_t a, usize size) {
-  return a.func(ALLOC_MALLOC, a.data, NULL, size);
-}
-
-alwaysinline void *s_realloc(allocator_t a, void *ptr, usize size) {
-  return a.func(ALLOC_REALLOC, a.data, ptr, size);
-}
-
-alwaysinline void s_dealloc(allocator_t a, void *ptr) {
-  a.func(ALLOC_FREE, a.data, ptr, 0);
-}
-
-alwaysinline bool allocators_eq(allocator_t a, allocator_t b) {
-  return a.func == b.func;
-}
 
 /* System allocators */
 #if defined(OS_WINDOWS)
@@ -113,15 +107,15 @@ alwaysinline void *system_realloc(void *ptr, usize prev_size, usize new_size) {
 /* Std allocators */
 ALLOCATOR_FUNC(std_alloc_func) {
   switch (action) {
-    case ALLOC_MALLOC: {
-      return malloc(size);
-    } break;
-    case ALLOC_REALLOC: {
-      return realloc(ptr, size);
-    } break;
-    case ALLOC_FREE: {
-      free(ptr);
-    } break;
+  case ALLOC_MALLOC: {
+    return malloc(size);
+  } break;
+  case ALLOC_REALLOC: {
+    return realloc(ptr, size);
+  } break;
+  case ALLOC_FREE: {
+    free(ptr);
+  } break;
   }
   return NULL;
 }
@@ -133,8 +127,8 @@ typedef struct xmalloc_info_t {
   xmalloc_handler_t xmalloc_handler;
 } xmalloc_info_t;
 
-static inline void *xmalloc(allocator_t a, usize size,
-                            xmalloc_handler_t xmalloc_handler) {
+static void *xmalloc(allocator_t a, usize size,
+                     xmalloc_handler_t xmalloc_handler) {
   void *ptr = s_alloc(a, size);
   if (ptr == NULL) {
     return xmalloc_handler();
@@ -142,8 +136,8 @@ static inline void *xmalloc(allocator_t a, usize size,
   return ptr;
 }
 
-static inline void *xrealloc(allocator_t a, void *ptr, usize size,
-                             xmalloc_handler_t xmalloc_handler) {
+static void *xrealloc(allocator_t a, void *ptr, usize size,
+                      xmalloc_handler_t xmalloc_handler) {
   void *new_ptr = s_realloc(a, ptr, size);
   if (new_ptr == NULL) {
     return xmalloc_handler();
@@ -151,7 +145,7 @@ static inline void *xrealloc(allocator_t a, void *ptr, usize size,
   return new_ptr;
 }
 
-static inline void xfree(allocator_t a, void *ptr) { s_dealloc(a, ptr); }
+static void xfree(allocator_t a, void *ptr) { s_dealloc(a, ptr); }
 
 ALLOCATOR_FUNC(xallocator_func) {
   xmalloc_info_t *xdata = cast(xmalloc_info_t *) data;
@@ -223,7 +217,7 @@ static void arena_grow(arena_t *arena, usize min_size) {
   array_push(arena->blocks, block);
 }
 
-void *arena_alloc(void * data, usize size) {
+void *arena_alloc(void *data, usize size) {
   arena_t *arena = cast(arena_t *) data;
   void *ptr;
   if (size > (usize)(arena->end - arena->ptr)) {
@@ -250,7 +244,6 @@ void arena_dealloc(allocator_t *a) {
 }
 
 ALLOCATOR_FUNC(arena_alloc_func) {
-  arena_t *arena = cast(arena_t *) data;
   switch (action) {
   case ALLOC_MALLOC: {
     return arena_alloc(data, size);
