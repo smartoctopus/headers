@@ -14,6 +14,7 @@ typedef struct ArrayHeader {
 } ArrayHeader;
 
 void *__array_set_capacity(void *array, usize capacity, usize element_size);
+void *__array_xmalloc_handler(void);
 
 #if !defined(Array)
 #define Array(T) T *
@@ -39,17 +40,19 @@ void *__array_set_capacity(void *array, usize capacity, usize element_size);
 #define array_init_helper(_allocator, x, _cap)                                 \
   do {                                                                         \
     void **_array = cast(void **) & (x);                                       \
+    allocator_t x_allocator =                                                  \
+        make_xallocator(_allocator, __array_xmalloc_handler);                  \
     ArrayHeader *_header = cast(ArrayHeader *)                                 \
-        xmalloc(_allocator, sizeof(ArrayHeader) + sizeof(*(x)) * (_cap));      \
+        s_alloc(x_allocator, sizeof(ArrayHeader) + sizeof(*(x)) * (_cap));     \
     _header->length = 0;                                                       \
     _header->capacity = _cap;                                                  \
-    _header->allocator = _allocator;                                           \
+    _header->allocator = x_allocator;                                          \
     *_array = cast(void *)(_header + 1);                                       \
   } while (0)
 #endif
 
 #if !defined(array_init)
-#define array_init(allocator, x) array_init_helper(allocator, x, 8)
+#define array_init(_allocator, x) array_init_helper(_allocator, x, 8)
 #endif
 
 #if !defined(array_dealloc)
@@ -74,7 +77,7 @@ void *__array_set_capacity(void *array, usize capacity, usize element_size);
 #define array_grow(x, cap)                                                     \
   do {                                                                         \
     isize _cap = GROW_FORMULA(array_capacity(x));                              \
-    if (_cap < cast(isize)cap)                                                            \
+    if (_cap < cast(isize) cap)                                                \
       _cap = cap;                                                              \
     array_set_capacity(x, _cap);                                               \
   } while (0)
@@ -110,7 +113,7 @@ void *__array_set_capacity(void *array, usize capacity, usize element_size);
 #define array_concat(x, items)                                                 \
   do {                                                                         \
     if (sizeof(*(x)) == sizeof(*(items)) &&                                    \
-        are_same_allocators(ARRAY_HEADER(x)->allocator,                        \
+        allocators_eq(ARRAY_HEADER(x)->allocator,                        \
                             ARRAY_HEADER(x)->allocator)) {                     \
       usize x_length = array_length(x);                                        \
       if (array_capacity(x) < (array_length(x) + array_length(items)))         \
@@ -148,6 +151,8 @@ void *__array_set_capacity(void *array, usize capacity, usize element_size);
 
 #if defined(ARRAYS_IMPLEMENTATION)
 #undef ARRAYS_IMPLEMENTATION
+#include "string.h"
+
 /* Variable Length Arrays */
 void *__array_set_capacity(void *array, usize capacity, usize element_size) {
   ArrayHeader *header = ARRAY_HEADER(array);
@@ -168,14 +173,20 @@ void *__array_set_capacity(void *array, usize capacity, usize element_size) {
     header->capacity = new_capacity;
   }
   size = sizeof(ArrayHeader) + element_size * capacity;
-  new_header = cast(ArrayHeader *) xmalloc(a, size);
+  new_header = cast(ArrayHeader *) s_alloc(a, size);
   memmove(new_header, header,
           sizeof(ArrayHeader) + element_size * header->length);
   new_header->length = header->length;
   new_header->capacity = capacity;
   new_header->allocator = a;
-  xfree(a, header);
+  s_dealloc(a, header);
   return cast(void *)(new_header + 1);
+}
+
+void *__array_xmalloc_handler(void) {
+  fprintf(stderr, "[Allocation Error] Couldn't allocate memory for arrays! Aborting...\n");
+  abort();
+  return NULL;
 }
 
 #endif

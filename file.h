@@ -45,10 +45,10 @@ file_t read_file(allocator_t a, char *path) {
   fseek(file, 0, SEEK_END);
   length = ftell(file);
   fseek(file, 0, SEEK_SET);
-  content = cast(char *) xmalloc(a, length + 1);
+  content = cast(char *) s_alloc(a, length + 1);
   if (length && fread(content, length, 1, file) != 1) {
     fclose(file);
-    xfree(a, content);
+    s_dealloc(a, content);
     result.content = NULL;
     result.length = 0;
     return result;
@@ -62,7 +62,7 @@ file_t read_file(allocator_t a, char *path) {
 }
 
 void free_file(file_t *file) {
-  xfree(file->allocator, file->content);
+  s_dealloc(file->allocator, file->content);
   file->length = 0;
   file->content = NULL;
 }

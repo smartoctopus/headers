@@ -161,7 +161,7 @@ String String_alloc_length(allocator_t a, u8 *string, usize size) {
     result.sso.str[size] = '\0';
     String_set_sso_size(&result, size);
   } else {
-    result.non_sso.str = xmalloc(a, size + 1);
+    result.non_sso.str = s_alloc(a, size + 1);
     memcpy(result.non_sso.str, string, size);
     result.non_sso.str[size + 1] = '\0';
     String_set_non_sso_data(&result, size, size);
@@ -175,7 +175,7 @@ alwaysinline String String_alloc(allocator_t a, u8 *string) {
 
 alwaysinline void String_dealloc(allocator_t a, String *str) {
   if (!String_is_sso(str)) {
-    xfree(a, str->non_sso.str);
+    s_dealloc(a, str->non_sso.str);
   }
 }
 
