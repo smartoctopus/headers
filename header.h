@@ -7,6 +7,7 @@ extern "C" {
 
 /* Includes */
 #include <ctype.h>
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -725,7 +726,7 @@ HEADER_DEF void *__array_set_capacity(void *array, usize capacity,
         _allocator, sizeof(ArrayHeader) + sizeof(*(x)) * (_cap));              \
     _header->length = 0;                                                       \
     _header->capacity = _cap;                                                  \
-    _header->allocator = x_allocator;                                          \
+    _header->allocator = _allocator;                                           \
     *_array = (void *)(_header + 1);                                           \
   } while (0)
 #endif
@@ -1126,7 +1127,7 @@ allocator_t make_xallocator(allocator_t a, xmalloc_handler_t xmalloc_handler) {
 }
 
 void *default_xmalloc_handler(void) {
-  fprintf(stderr, "[Allocation error] Couldn't allocate memory! Aborting...");
+  fprintf(stderr, "[Allocation error] Couldn't allocate memory! Aborting...\n");
   abort();
   return NULL;
 }
@@ -1181,7 +1182,7 @@ void *arena_realloc(void *data, void *ptr, usize size) {
   unused(data);
   unused(ptr);
   unused(size);
-  fprintf(stderr, "Cannot call s_realloc on arena allocator! Aborting...");
+  fprintf(stderr, "Cannot call s_realloc on arena allocator! Aborting...\n");
   abort();
   return NULL;
 }
@@ -1198,9 +1199,6 @@ void arena_dealloc(allocator_t *a) {
 void arena_error_dealloc(void *data, void *ptr) {
   unused(data);
   unused(ptr);
-  fprintf(stderr, "[Allocation Error] Cannot deallocate memory from arena "
-                  "allocator! Aborting...");
-  abort();
 }
 
 allocator_t make_arena_allocator(allocator_t a, usize size) {
@@ -1247,6 +1245,7 @@ void *__array_set_capacity(void *array, usize capacity, usize element_size) {
   return (void *)(new_header + 1);
 }
 
+/* File */
 file_t read_file(allocator_t a, char *path) {
   file_t result;
   FILE *file;
