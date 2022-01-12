@@ -23,6 +23,8 @@ typedef struct allocator_t {
   void *data;
 } allocator_t;
 
+extern void *s_calloc(allocator_t a, usize num, usize size);
+
 #if !defined(s_alloc)
 #define s_alloc(_a, _size) (_a.func(ALLOC_MALLOC, _a.data, NULL, _size))
 #endif
@@ -68,6 +70,14 @@ allocator_t make_arena_allocator(allocator_t a, usize arena_size);
 
 #include "arrays.h"
 #include "macros.h"
+
+/* s_calloc */
+void *s_calloc(allocator_t a, usize num, usize size) {
+  usize new_size = num * size;
+  void *ptr = s_alloc(a, new_size);
+  memset(ptr, 0, new_size);
+  return ptr;
+}
 
 /* System allocators */
 #if defined(OS_WINDOWS)
