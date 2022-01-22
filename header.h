@@ -682,10 +682,10 @@ HEADER_DEF void *system_realloc(void *ptr, usize prev_size, usize new_size);
 HEADER_DEF allocator_t std_allocator;
 
 typedef void *(*xmalloc_handler_t)(void);
-allocator_t make_xallocator(allocator_t a, xmalloc_handler_t xmalloc_handler);
+allocator_t xallocator_make(allocator_t a, xmalloc_handler_t xmalloc_handler);
 HEADER_DEF void *default_xmalloc_handler(void);
 
-allocator_t make_arena_allocator(allocator_t a, usize arena_size);
+allocator_t arena_make(allocator_t a, usize arena_size);
 void arena_dealloc(allocator_t *a);
 
 /* Variable length arrays */
@@ -834,16 +834,19 @@ typedef struct file_t {
   allocator_t allocator;
 } file_t;
 
-file_t read_file(allocator_t a, char *path);
-void free_file(file_t *file);
+file_t file_read(allocator_t a, char *path);
+void file_dealloc(file_t *file);
 
 #if !defined(file_for)
 #define file_for(_index, _value, _file, _body)                                 \
   do {                                                                         \
-    usize _index = 0;                                                          \
-    char _value = _file.content[_index];                                       \
-    for (; _index < _file.length; _value = _file.content[++_index])            \
-      _body                                                                    \
+    if (_file.content != NULL && _file.length > 0) {                           \
+      usize _index = 0;                                                        \
+      char _value = _file.content[_index];                                     \
+      for (; _index < _file.length; _value = _file.content[++_index]) {        \
+        _body                                                                  \
+      }                                                                        \
+    }                                                                          \
   } while (0)
 #endif
 
@@ -967,7 +970,7 @@ typedef union string_t {
   SSO_String sso;
 } string_t;
 
-HEADER_DEF string_t string_alloc(allocator_t a, char *string, ...);
+HEADER_DEF string_t string_make(allocator_t a, char *string, ...);
 HEADER_DEF void string_dealloc(allocator_t a, string_t *str);
 HEADER_DEF u8 *string_to_cstr(string_t *str);
 HEADER_DEF usize string_length(string_t *str);
@@ -996,12 +999,16 @@ typedef struct hashmap_t {
   allocator_t allocator;
 } hashmap_t;
 
-HEADER_DEF hashmap_t make_hashmap(allocator_t a, hasher_t hasher);
+HEADER_DEF hashmap_t hashmap_make(allocator_t a, hasher_t hasher);
 HEADER_DEF void hashmap_put(hashmap_t *hashmap, void *key, void *elem);
 HEADER_DEF void hashmap_put_from_u64(hashmap_t *hashmap, u64 key, void *val);
+HEADER_DEF void hashmap_put_from_str_length(hashmap_t *hashmap, char *key,
+                                            usize length, void *val);
 HEADER_DEF void hashmap_put_from_str(hashmap_t *hashmap, char *key, void *val);
 HEADER_DEF void *hashmap_get(hashmap_t *hashmap, void *key);
 HEADER_DEF void *hashmap_get_from_u64(hashmap_t *hashmap, u64 key);
+HEADER_DEF void *hashmap_get_from_str_length(hashmap_t *hashmap, char *key,
+                                             usize length);
 HEADER_DEF void *hashmap_get_from_str(hashmap_t *hashmap, char *key);
 
 HEADER_DEF hasher_t default_hasher;
@@ -1114,7 +1121,7 @@ void xmalloc_dealloc(void *_data, void *ptr) {
   hdealloc(data->allocator, ptr);
 }
 
-allocator_t make_xallocator(allocator_t a, xmalloc_handler_t xmalloc_handler) {
+allocator_t xallocator_make(allocator_t a, xmalloc_handler_t xmalloc_handler) {
   allocator_t result;
   xmalloc_info_t *data = (xmalloc_info_t *)halloc(a, sizeof(xmalloc_info_t));
   data->allocator = a;
@@ -1201,7 +1208,7 @@ void arena_error_dealloc(void *data, void *ptr) {
   unused(ptr);
 }
 
-allocator_t make_arena_allocator(allocator_t a, usize size) {
+allocator_t arena_make(allocator_t a, usize size) {
   allocator_t result;
   arena_t *arena = (arena_t *)halloc(a, sizeof(arena_t));
   arena->end = NULL;
@@ -1246,7 +1253,7 @@ void *__array_set_capacity(void *array, usize capacity, usize element_size) {
 }
 
 /* File */
-file_t read_file(allocator_t a, char *path) {
+file_t file_read(allocator_t a, char *path) {
   file_t result;
   FILE *file;
   usize length;
@@ -1277,7 +1284,7 @@ file_t read_file(allocator_t a, char *path) {
   return result;
 }
 
-void free_file(file_t *file) {
+void file_dealloc(file_t *file) {
   hdealloc(file->allocator, file->content);
   file->length = 0;
   file->content = NULL;
@@ -1713,7 +1720,7 @@ string_t string_alloc_internal(allocator_t a, char *string, usize size,
   return result;
 }
 
-string_t string_alloc(allocator_t a, char *string, ...) {
+string_t string_make(allocator_t a, char *string, ...) {
   va_list args;
   string_t result;
   usize size;
@@ -1758,7 +1765,7 @@ usize string_capacity(string_t *str) {
 
 /* Hashmap */
 
-hashmap_t make_hashmap(allocator_t a, hasher_t hasher) {
+hashmap_t hashmap_make(allocator_t a, hasher_t hasher) {
   hashmap_t result = {NULL, NULL, 0, 0, hasher, a};
   return result;
 }
@@ -1835,7 +1842,8 @@ static void hashmap_put_u64_from_str(hashmap_t *hashmap, char *key, usize size,
       hashmap->keys[hash] = (u64)(uintptr)key;
       hashmap->vals[hash] = val;
       return;
-    } else if (hashmap->keys[hash] == (u64)(uintptr)key) {
+    } else if (strncmp((const char *)(uintptr)hashmap->keys[hash], key, size) ==
+               0) {
       hashmap->vals[hash] = val;
       return;
     }
@@ -1866,7 +1874,7 @@ static u64 hashmap_get_u64_from_str(hashmap_t *hashmap, char *key, usize size) {
   hash = hashmap->hasher.hash_bytes(key, size);
   while (true) {
     hash &= hashmap->capacity - 1;
-    if (hashmap->keys[hash] == (u64)(uintptr)key) {
+    if (strncmp((const char *)(uintptr)hashmap->keys[hash], key, size) == 0) {
       return hashmap->vals[hash];
     } else if (!hashmap->keys[hash]) {
       return 0;
@@ -1883,6 +1891,11 @@ void hashmap_put_from_u64(hashmap_t *hashmap, u64 key, void *val) {
   hashmap_put_u64_from_u64(hashmap, key, (u64)(uintptr)val);
 }
 
+void hashmap_put_from_str_length(hashmap_t *hashmap, char *key, usize length,
+                                 void *val) {
+  hashmap_put_u64_from_str(hashmap, key, length, (u64)(uintptr)val);
+}
+
 void hashmap_put_from_str(hashmap_t *hashmap, char *key, void *val) {
   hashmap_put_u64_from_str(hashmap, key, strlen(key), (u64)(uintptr)val);
 }
@@ -1893,6 +1906,10 @@ void *hashmap_get(hashmap_t *hashmap, void *key) {
 
 void *hashmap_get_from_u64(hashmap_t *hashmap, u64 key) {
   return (void *)(uintptr)hashmap_get_u64_from_u64(hashmap, key);
+}
+
+void *hashmap_get_from_str_length(hashmap_t *hashmap, char *key, usize length) {
+  return (void *)(uintptr)hashmap_get_u64_from_str(hashmap, key, length);
 }
 
 void *hashmap_get_from_str(hashmap_t *hashmap, char *key) {
