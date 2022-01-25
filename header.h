@@ -682,11 +682,12 @@ HEADER_DEF void *system_realloc(void *ptr, usize prev_size, usize new_size);
 HEADER_DEF allocator_t std_allocator;
 
 typedef void *(*xmalloc_handler_t)(void);
-allocator_t xallocator_make(allocator_t a, xmalloc_handler_t xmalloc_handler);
+HEADER_DEF allocator_t xallocator_make(allocator_t a,
+                                       xmalloc_handler_t xmalloc_handler);
 HEADER_DEF void *default_xmalloc_handler(void);
 
-allocator_t arena_make(allocator_t a, usize arena_size);
-void arena_dealloc(allocator_t *a);
+HEADER_DEF allocator_t arena_make(allocator_t a, usize arena_size);
+HEADER_DEF void arena_dealloc(allocator_t *a);
 
 /* Variable length arrays */
 typedef struct ArrayHeader {
@@ -1139,13 +1140,13 @@ void *default_xmalloc_handler(void) {
   return NULL;
 }
 
+#if !defined(DEFAULT_ALIGNMENT)
+#define DEFAULT_ALIGNMENT (2 * sizeof(void *))
+#endif
+
 /* Arena Allocators */
 #if !defined(ARENA_SIZE)
 #define ARENA_SIZE 1024 * 1024
-#endif
-
-#if !defined(ARENA_ALIGNMENT)
-#define ARENA_ALIGNMENT (sizeof(void *))
 #endif
 
 #define ALIGN_DOWN(n, a) ((n) & ~((a)-1))
@@ -1165,7 +1166,7 @@ typedef struct arena_t {
 } arena_t;
 
 static void arena_grow(arena_t *arena, usize min_size) {
-  usize size = ALIGN_UP(max(min_size, ARENA_SIZE), ARENA_ALIGNMENT);
+  usize size = ALIGN_UP(max(min_size, ARENA_SIZE), DEFAULT_ALIGNMENT);
   arena_block_t block;
   arena->ptr = (u8 *)system_alloc(size);
   arena->end = arena->ptr + size;
@@ -1181,7 +1182,7 @@ void *arena_alloc(void *data, usize size) {
     arena_grow(arena, size);
   }
   ptr = arena->ptr;
-  arena->ptr = (u8 *)ALIGN_UP_PTR(arena->ptr + size, ARENA_ALIGNMENT);
+  arena->ptr = (u8 *)ALIGN_UP_PTR(arena->ptr + size, DEFAULT_ALIGNMENT);
   return ptr;
 }
 
