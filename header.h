@@ -977,9 +977,8 @@ HEADER_DEF u8 *string_to_cstr(string_t *str);
 HEADER_DEF usize string_length(string_t *str);
 HEADER_DEF usize string_capacity(string_t *str);
 
-#if !defined(String_from_cstr)
-#define String_from_cstr(_allocator, cstr)                                     \
-  string_alloc(_allocator, (u8 *)(cstr))
+#if !defined(string_from_cstr)
+#define string_from_cstr(_allocator, cstr) string_make((_allocator), (cstr))
 #endif
 
 /* Hashmaps */
