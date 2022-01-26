@@ -981,6 +981,29 @@ HEADER_DEF usize string_capacity(string_t *str);
 #define string_from_cstr(_allocator, cstr) string_make((_allocator), (cstr))
 #endif
 
+/* Stringview */
+typedef struct stringview_t {
+  char *str;
+  usize length;
+} stringview_t;
+
+HEADER_DEF stringview_t stringview_make(char *ptr, usize length);
+HEADER_DEF void stringview_trim_space_left(stringview_t *sv);
+HEADER_DEF void stringview_trim_space_right(stringview_t *sv);
+HEADER_DEF void stringview_trim_space(stringview_t *sv);
+HEADER_DEF void strinview_chop_left(stringview_t *sv, usize size);
+HEADER_DEF void stringview_chop_right(stringview_t *sv, usize size);
+HEADER_DEF void stringview_chop_while(stringview_t *sv,
+                                      bool (*predicate)(char));
+HEADER_DEF stringview_t stringview_take_while(stringview_t sv,
+                                              bool (*predicate)(char));
+HEADER_DEF bool stringview_starts_with(stringview_t a, stringview_t b);
+HEADER_DEF bool stringview_ends_with(stringview_t a, stringview_t b);
+
+#if !defined(stringview_from_cstr)
+#define stringview_from_cstr(cstr) stringview_make((cstr), strlen((cstr)))
+#endif
+
 /* Hashmaps */
 typedef u64 (*hash_func_t)(u64);
 typedef u64 (*hash_bytes_func_t)(void *, usize);
@@ -1761,6 +1784,98 @@ usize string_capacity(string_t *str) {
   } else {
     return String_get_non_sso_data(str).capacity;
   }
+}
+
+stringview_t stringview_make(char *ptr, usize length) {
+  stringview_t result = {ptr, length};
+  return result;
+}
+
+void stringview_trim_space_left(stringview_t *sv) {
+  usize i = 0;
+  while (i < sv->length && isspace(sv->str[i])) {
+    sv->str++;
+    sv->length--;
+    i++;
+  }
+}
+
+HEADER_DEF void stringview_trim_space_right(stringview_t *sv) {
+  usize i = 0;
+  while (i < sv->length && isspace(sv->str[sv->length - i - 1])) {
+    sv->str++;
+    sv->length--;
+    i++;
+  }
+}
+
+HEADER_DEF void stringview_trim_space(stringview_t *sv) {
+  stringview_trim_space_left(sv);
+  stringview_string_trim_right(sv);
+}
+
+HEADER_DEF void strinview_chop_left(stringview_t *sv, usize size) {
+  if (size > sv->length) {
+    size = sv->length;
+  }
+  sv->str += size;
+  sv->length -= size;
+}
+
+HEADER_DEF void stringview_chop_right(stringview_t *sv, usize size) {
+  if (size > sv->length) {
+    size = sv->length;
+  }
+  sv->length -= size;
+}
+
+HEADER_DEF void stringview_chop_while(stringview_t *sv,
+                                      bool (*predicate)(char)) {
+  usize i = 0;
+  while (i < sv->length && predicate(sv->str[i])) {
+    sv->str++;
+    sv->length--;
+    i++;
+  }
+}
+
+HEADER_DEF stringview_t stringview_take_while(stringview_t sv,
+                                              bool (*predicate)(char)) {
+  usize i = 0;
+  while (i < sv.length && predicate(sv.str[i])) {
+    i++;
+  }
+  sv.length = i;
+  return sv;
+}
+
+HEADER_DEF bool stringview_starts_with(stringview_t a, stringview_t b) {
+  usize i = 0;
+  if (a.length < b.length) {
+    return false;
+  }
+  while (i < b.length) {
+    if (a.str[i] != b.str[i]) {
+      return false;
+    }
+    i++;
+  }
+  return true;
+}
+
+HEADER_DEF bool stringview_ends_with(stringview_t a, stringview_t b) {
+  usize i = 0;
+  if (a.length < b.length) {
+    return false;
+  }
+  i = a.length - b.length;
+  while (i < a.length) {
+    if (a.str[i] != b.str[i]) {
+      return false;
+    }
+    i++;
+  }
+  return true;
 }
 
 /* Hashmap */
