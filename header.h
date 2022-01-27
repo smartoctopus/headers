@@ -998,7 +998,9 @@ HEADER_DEF void stringview_chop_while(stringview_t *sv,
 HEADER_DEF stringview_t stringview_take_while(stringview_t sv,
                                               bool (*predicate)(char));
 HEADER_DEF bool stringview_starts_with(stringview_t a, stringview_t b);
+HEADER_DEF bool stringview_starts_with_cstr(stringview_t a, const char *b);
 HEADER_DEF bool stringview_ends_with(stringview_t a, stringview_t b);
+HEADER_DEF bool stringview_ends_with_cstr(stringview_t a, const char *b);
 
 #if !defined(stringview_from_cstr)
 #define stringview_from_cstr(cstr) stringview_make((cstr), strlen((cstr)))
@@ -1861,17 +1863,52 @@ bool stringview_starts_with(stringview_t a, stringview_t b) {
   return true;
 }
 
-HEADER_DEF bool stringview_ends_with(stringview_t a, stringview_t b) {
+bool stringview_starts_with_cstr(stringview_t a, const char *b) {
   usize i = 0;
+  usize length = strlen(b);
+  if (a.length < length) {
+    return false;
+  }
+  while (i < length) {
+    if (a.str[i] != b[i]) {
+      return false;
+    }
+    i++;
+  }
+  return true;
+}
+
+bool stringview_ends_with(stringview_t a, stringview_t b) {
+  usize i = 0;
+  usize j = 0;
   if (a.length < b.length) {
     return false;
   }
   i = a.length - b.length;
   while (i < a.length) {
-    if (a.str[i] != b.str[i]) {
+    if (a.str[i] != b.str[j]) {
       return false;
     }
     i++;
+    j++;
+  }
+  return true;
+}
+
+bool stringview_ends_with_cstr(stringview_t a, const char *b) {
+  usize i = 0;
+  usize j = 0;
+  usize length = strlen(b);
+  if (a.length < length) {
+    return false;
+  }
+  i = a.length - length;
+  while (i < a.length) {
+    if (a.str[i] != b[j]) {
+      return false;
+    }
+    i++;
+    j++;
   }
   return true;
 }
