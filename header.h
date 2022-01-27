@@ -991,7 +991,7 @@ HEADER_DEF stringview_t stringview_make(char *ptr, usize length);
 HEADER_DEF void stringview_trim_space_left(stringview_t *sv);
 HEADER_DEF void stringview_trim_space_right(stringview_t *sv);
 HEADER_DEF void stringview_trim_space(stringview_t *sv);
-HEADER_DEF void strinview_chop_left(stringview_t *sv, usize size);
+HEADER_DEF void stringview_chop_left(stringview_t *sv, usize size);
 HEADER_DEF void stringview_chop_right(stringview_t *sv, usize size);
 HEADER_DEF void stringview_chop_while(stringview_t *sv,
                                       bool (*predicate)(char));
@@ -1786,6 +1786,7 @@ usize string_capacity(string_t *str) {
   }
 }
 
+/* Stringview */
 stringview_t stringview_make(char *ptr, usize length) {
   stringview_t result = {ptr, length};
   return result;
@@ -1794,27 +1795,26 @@ stringview_t stringview_make(char *ptr, usize length) {
 void stringview_trim_space_left(stringview_t *sv) {
   usize i = 0;
   while (i < sv->length && isspace(sv->str[i])) {
-    sv->str++;
-    sv->length--;
     i++;
   }
+  sv->str += i;
+  sv->length -= i;
 }
 
-HEADER_DEF void stringview_trim_space_right(stringview_t *sv) {
+void stringview_trim_space_right(stringview_t *sv) {
   usize i = 0;
   while (i < sv->length && isspace(sv->str[sv->length - i - 1])) {
-    sv->str++;
-    sv->length--;
     i++;
   }
+  sv->length -= i;
 }
 
-HEADER_DEF void stringview_trim_space(stringview_t *sv) {
+void stringview_trim_space(stringview_t *sv) {
   stringview_trim_space_left(sv);
-  stringview_string_trim_right(sv);
+  stringview_trim_space_right(sv);
 }
 
-HEADER_DEF void strinview_chop_left(stringview_t *sv, usize size) {
+void stringview_chop_left(stringview_t *sv, usize size) {
   if (size > sv->length) {
     size = sv->length;
   }
@@ -1822,25 +1822,23 @@ HEADER_DEF void strinview_chop_left(stringview_t *sv, usize size) {
   sv->length -= size;
 }
 
-HEADER_DEF void stringview_chop_right(stringview_t *sv, usize size) {
+void stringview_chop_right(stringview_t *sv, usize size) {
   if (size > sv->length) {
     size = sv->length;
   }
   sv->length -= size;
 }
 
-HEADER_DEF void stringview_chop_while(stringview_t *sv,
-                                      bool (*predicate)(char)) {
+void stringview_chop_while(stringview_t *sv, bool (*predicate)(char)) {
   usize i = 0;
   while (i < sv->length && predicate(sv->str[i])) {
-    sv->str++;
-    sv->length--;
     i++;
   }
+  sv->str += i;
+  sv->length -= i;
 }
 
-HEADER_DEF stringview_t stringview_take_while(stringview_t sv,
-                                              bool (*predicate)(char)) {
+stringview_t stringview_take_while(stringview_t sv, bool (*predicate)(char)) {
   usize i = 0;
   while (i < sv.length && predicate(sv.str[i])) {
     i++;
@@ -1849,7 +1847,7 @@ HEADER_DEF stringview_t stringview_take_while(stringview_t sv,
   return sv;
 }
 
-HEADER_DEF bool stringview_starts_with(stringview_t a, stringview_t b) {
+bool stringview_starts_with(stringview_t a, stringview_t b) {
   usize i = 0;
   if (a.length < b.length) {
     return false;
