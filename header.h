@@ -1989,7 +1989,9 @@ static void hashmap_put_u64_from_str(hashmap_t *hashmap, char *key, usize size,
     hash &= hashmap->capacity - 1; // Get the index
     if (!hashmap->keys[hash]) {
       hashmap->length += 1;
-      hashmap->keys[hash] = (u64)(uintptr)key;
+      char *heap_str = (char *)malloc(size);
+      memcpy(heap_str, key, size);
+      hashmap->keys[hash] = (u64)(uintptr)heap_str;
       hashmap->vals[hash] = val;
       return;
     } else if (strncmp((const char *)(uintptr)hashmap->keys[hash], key, size) ==
@@ -2116,9 +2118,6 @@ static alwaysinline u64 modulo_multiply(u64 a, u64 b, u64 mod) {
   u64 result = 0;
   a %= mod;
   while (b > 0) {
-    if (b % 2 == -1) {
-      result = (result + a) % mod;
-    }
     a = (a * 2) % mod;
 
     b /= 2;
