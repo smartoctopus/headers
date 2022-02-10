@@ -1352,26 +1352,35 @@ int _flag_parse_submode(int *argc, char ***argv) {
     *argv += 1;
   }
 
-  submode = *argv[0];
+  if (*argv[0]) {
+    submode = *argv[0];
 
-  SET_FLAG_PARSER_ERROR(parser, FLAG_ERROR_NONE, submode);
+    SET_FLAG_PARSER_ERROR(parser, FLAG_ERROR_NONE, submode);
 
-  for (iter = 0; iter < parser->submodes_count; ++iter) {
-    if (strcmp(submode, parser->submodes[iter].name) == 0) {
-      *argc -= 1;
-      *argv += 1;
-      return parser->submodes[iter].handler(*argc, *argv);
+    for (iter = 0; iter < parser->submodes_count; ++iter) {
+      if (strcmp(submode, parser->submodes[iter].name) == 0) {
+        *argc -= 1;
+        *argv += 1;
+        return parser->submodes[iter].handler(*argc, *argv);
+      }
     }
-  }
 
-  fprintf(stderr, "Unknown submode %s\n", submode);
+    fprintf(stderr, "Unknown submode %s\n", submode);
+    fprintf(stderr, "Available submodes are:\n");
+
+    for (iter = 0; iter < parser->submodes_count; ++iter) {
+      fprintf(stderr, "\t- %s\n", parser->submodes[iter].name);
+    }
+    return 1;
+  }
+  fprintf(stderr, "[Flag] Submode required\n");
   fprintf(stderr, "Available submodes are:\n");
 
   for (iter = 0; iter < parser->submodes_count; ++iter) {
     fprintf(stderr, "\t- %s\n", parser->submodes[iter].name);
   }
 
-  return 1;
+  exit(1);
 }
 
 static Flag *flag_new(FlagType type, const char *name,
